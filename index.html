@@ -39,7 +39,7 @@ button,input,select{font:inherit}button{color:inherit}.app{width:min(980px,100%)
  <form class="panel compose" id="addForm"><label class="sr" for="taskInput">New task</label><input id="taskInput" maxlength="180" autocomplete="off" placeholder="What needs your attention?" required><button class="addbtn">Add task</button></form>
  <div class="workspace">
   <section class="panel taskpanel"><div class="taskhead"><h2>Tasks</h2><span id="taskCount">0 tasks</span></div><div class="tasks" id="taskList"></div></section>
-  <aside class="panel side"><div><h2>Daily progress</h2><div class="stat"><strong id="doneCount">0</strong><span id="totalCount">of 0 complete</span></div><div class="bar"><i id="barFill"></i></div></div><div class="quote">“Small steps, returned to daily, become a life.”</div></aside>
+  <aside class="panel side"><div><h2>Daily progress</h2><div class="stat"><strong id="doneCount">0</strong><span id="totalCount">of 0 complete</span></div><div class="bar"><i id="barFill"></i></div></div><div class="quote" id="quote" title="Tap for another quote" style="cursor:pointer"></div></aside>
  </div>
 </section>
 <section class="panel history" id="historyView">
@@ -65,7 +65,23 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 function fmt(k,o){return new Intl.DateTimeFormat(undefined,o).format(dateFrom(k))}
 function todayKey(){return dayKey(new Date())}
 function sameDay(a,b){return a===b}
-function render(){renderDate();renderTasks();renderProgress();renderHistory()}
+function render(){renderDate();renderTasks();renderProgress();renderHistory();renderQuote()}
+const QUOTES=[
+"We don't make mistakes, just happy little accidents.",
+"Talent is a pursued interest. Anything that you're willing to practice, you can do.",
+"You can do anything you want to do. This is your world.",
+"The secret to doing anything is believing that you can do it.",
+"I think there's an artist hidden at the bottom of every single one of us.",
+"In painting, you have unlimited power. You have the ability to move mountains.",
+"It's so important to do something every day that will make you happy.",
+"Look around. Look at what we have. Beauty is everywhere \u2014 you only have to look to see it.",
+"Gotta give him a friend. Everyone needs a friend.",
+"There are no limits here. You start out by believing here, and then you can apply that to anything.",
+"Just let go \u2014 and fall like a little waterfall.",
+"Don't be afraid to scrape the paint off and do it again."];
+let quoteBump=0;
+function renderQuote(){const n=new Date(),doy=Math.floor((n-new Date(n.getFullYear(),0,0))/864e5);$('#quote').textContent='\u201C'+QUOTES[(doy+quoteBump)%QUOTES.length]+'\u201D \u2014 Bob Ross'}
+$('#quote').onclick=()=>{quoteBump++;renderQuote()};
 function renderDate(){const d=dateFrom(selected),today=todayKey(),diff=Math.round((d-dateFrom(today))/86400000);$('#dayLabel').textContent=diff===0?'Today':diff===-1?'Yesterday':diff===1?'Tomorrow':'Daily focus';$('#dateLong').textContent=fmt(selected,{weekday:'long',month:'long',day:'numeric'});$('#dateShort').textContent=fmt(selected,{weekday:'short',month:'short',day:'numeric',year:'numeric'});$('#jumpToday').disabled=sameDay(selected,today);$('#jumpToday').textContent=sameDay(selected,today)?'You’re here':'Return to today';const h=new Date().getHours();$('#greeting').textContent=diff!==0?'A day at a glance.':h<12?'Good morning.':h<18?'Good afternoon.':'Good evening.'}
 function renderTasks(){const list=tasks.filter(t=>t.date===selected).sort((a,b)=>Number(a.completed)-Number(b.completed)||a.order-b.order);$('#taskCount').textContent=`${list.length} ${list.length===1?'task':'tasks'}`;if(!list.length){const prior=incompleteBefore(selected);$('#taskList').innerHTML=`<div class="empty"><span class="leaf">⌁</span><strong>A clear page</strong><span>Add a task and give the day a little shape.</span>${sameDay(selected,todayKey())&&prior.length?`<div class="carry"><button class="textbtn" id="carryBtn">Carry over ${prior.length} unfinished</button></div>`:''}</div>`;$('#carryBtn')?.addEventListener('click',carryOver);return}$('#taskList').innerHTML=list.map(t=>`<article class="task ${t.completed?'done':''}" data-id="${t.id}"><button class="check" aria-label="${t.completed?'Mark incomplete':'Mark complete'}">${t.completed?'✓':''}</button><div><div class="taskText">${esc(t.text)}</div><div class="taskMeta"><i class="priority ${t.priority||'normal'}"></i>${t.priority==='high'?'High priority':t.priority==='low'?'Low priority':'Normal priority'}${t.completedAt?` · completed ${new Date(t.completedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`:''}</div></div><button class="more" aria-label="Edit task">•••</button></article>`).join('');$$('.task').forEach(row=>{const id=row.dataset.id;row.querySelector('.check').onclick=()=>toggle(id);row.querySelector('.more').onclick=()=>openEdit(id)})}
 function renderProgress(){const list=tasks.filter(t=>t.date===selected),done=list.filter(t=>t.completed).length,p=list.length?Math.round(done/list.length*100):0;$('#progressOrb').style.setProperty('--p',p+'%');$('#percent').textContent=p+'%';$('#doneCount').textContent=done;$('#totalCount').textContent=`of ${list.length} complete`;$('#barFill').style.width=p+'%'}
